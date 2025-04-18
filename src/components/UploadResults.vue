@@ -1,30 +1,38 @@
 <template>
-    <div class="upload-results">
-      <h2>Upload Student Results (JSON)</h2>
-      <h4>Select Class and Section for uploading the result</h4>
-      <form>
-        <label>Class:
-          <select v-model="selectedClass">
-            <option value="Class_9">Class 9</option>
-            <option value="Class_10">Class 10</option>
-            <option value="Class_11">Class 11</option>
-            <option value="Class_12">Class 12</option>
-          </select>
-        </label>
-        <label>Section:
-          <select v-model="selectedSection">
-            <option value="A">A</option>
-            <option value="B">B</option>
-            <option value="B">C</option>
-          </select>
-        </label>
-      </form>
+  <div class="upload-results">
+    <h2>Upload Student Results (JSON)</h2>
+    <h4>Select Class and Section for uploading the result</h4>
 
+    <form class="form-section">
+      <label>
+        Class:
+        <select v-model="selectedClass">
+          <option value="Class_9">Class 9</option>
+          <option value="Class_10">Class 10</option>
+          <option value="Class_11">Class 11</option>
+          <option value="Class_12">Class 12</option>
+        </select>
+      </label>
+
+      <label>
+        Section:
+        <select v-model="selectedSection">
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+        </select>
+      </label>
+    </form>
+
+    <div class="upload-section">
       <input type="file" @change="handleFileUpload" accept=".json" />
       <button @click="uploadResults" :disabled="!jsonData">Upload</button>
-      <p v-if="uploadStatus">{{ uploadStatus }}</p>
     </div>
-  </template>
+
+    <p v-if="uploadStatus" class="status-msg">{{ uploadStatus }}</p>
+  </div>
+</template>
+
   
   <script>
   import { getDatabase, ref, set } from "firebase/database";
@@ -83,24 +91,81 @@
   };
   </script>
   
-  <style scoped>
-  .upload-results {
-    border: 1px solid #ccc;
-    padding: 20px;
-    margin-top: 20px;
-    background: #f9f9f9;
-  }
-  .upload-results input[type="file"] {
-    margin-bottom: 10px;
-  }
-  .upload-results button {
-    padding: 5px 10px;
-    background: #4caf50;
-    color: white;
-    border: none;
-    cursor: pointer;
-  }
-  .upload-results p {
-    margin-top: 10px;
-  }
-  </style>
+
+<style scoped>
+.upload-results {
+  max-width: 500px;
+  margin: 40px auto;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #fafafa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.upload-results h2 {
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.upload-results h4 {
+  margin-bottom: 20px;
+  font-weight: 400;
+  color: #666;
+}
+
+.form-section {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+  color: #444;
+}
+
+select {
+  padding: 6px 10px;
+  font-size: 14px;
+  margin-top: 5px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.upload-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  justify-content: center;
+}
+
+input[type="file"] {
+  font-size: 14px;
+}
+
+button {
+  background-color: #4CAF50;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.status-msg {
+  font-size: 14px;
+  color: #555;
+}
+</style>

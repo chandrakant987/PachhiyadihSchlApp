@@ -3,11 +3,17 @@ import { createRouter, createWebHistory } from 'vue-router';
 import HomePage from '../views/HomePage.vue';
 import AdminPage from '../views/AdminPage.vue';
 import ResultSearch from '../views/ResultSearch.vue';
+import StudentAttendancePage from '../views/StudentAttendancePage.vue';
+import Notifications from '../views/Notifications.vue';
+import AttendanceDashboard from '../views/AttendanceDashboard.vue';
 
 const routes = [
   { path: '/', component: HomePage },
   { path: '/admin', component: AdminPage },
   { path: '/result-search', component: ResultSearch},
+  { path: '/mark-attendance', component: StudentAttendancePage},
+  { path: '/view-notifications', component: Notifications},
+  { path: '/attendace-dashboard', component: AttendanceDashboard},
 ];
 
 const router = createRouter({
