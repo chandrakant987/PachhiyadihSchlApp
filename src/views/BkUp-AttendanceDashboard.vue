@@ -23,7 +23,7 @@
           @input="updateSelectedStudent"
         />
         <datalist id="students">
-          <option v-for="student in filteredStudents" :key="student.studentId" :value="student.name">
+          <option v-for="student in students" :key="student.studentId" :value="student.name">
             {{ student.name }} ({{ student.studentId }})
           </option>
         </datalist>
@@ -66,9 +66,9 @@
             <td>{{ record.rollNumber }}</td>
             <td>{{ record.name }}</td>
             <td>{{ record.classId }}</td>
-            <td>{{ record.parentContact || record.studentContact || 'N/A' }}</td>
+            <td>{{ record.parentContact || 'N/A' }}</td>
             <td>
-              <a v-if="record.parentContact || record.studentContact" :href="generateWhatsAppLink(record)" target="_blank">Message</a>
+              <a v-if="record.parentContact" :href="generateWhatsAppLink(record)" target="_blank">Message</a>
               <span v-else>-</span>
             </td>
           </tr>
@@ -185,6 +185,7 @@
 import { collection, query, where, getDocs, doc, getDoc, getFirestore } from 'firebase/firestore';
 import { format } from 'date-fns';
 import Snackbar from '../components/Snackbar.vue';
+//console.log('date-fns format:', typeof format);
 
 export default {
   name: 'AttendanceDashboard',
@@ -226,18 +227,6 @@ export default {
       isLoading: false,
       debounceLoadData: null,
     };
-  },
-  computed: {
-    filteredStudents() {
-      if (!this.selectedClass) {
-        return this.students;
-      }
-      const classData = this.classes.find(c => c.classId === this.selectedClass);
-      if (!classData) {
-        return [];
-      }
-      return this.students.filter(s => classData.studentIds.includes(s.studentId));
-    }
   },
   mounted() {
     this.debounceLoadData = this.debounce(this.loadData, 300);
@@ -290,15 +279,7 @@ export default {
       const student = this.students.find(
         s => s.name === this.selectedStudentName || `${s.name} (${s.studentId})` === this.selectedStudentName
       );
-      if (student && this.filteredStudents.some(s => s.studentId === student.studentId)) {
-        this.selectedStudent = student;
-      } else {
-        this.selectedStudent = null;
-        this.selectedStudentName = '';
-        if (student) {
-          this.showSnackbar('Selected student is not in the current class');
-        }
-      }
+      this.selectedStudent = student || null;
       if (this.activeTab === 'student' && this.selectedStudent) {
         this.loadData();
       }
@@ -369,7 +350,6 @@ export default {
             ...record,
             ...students[record.studentId],
             parentContact: students[record.studentId]?.contact?.parentContact,
-            studentContact: students[record.studentId]?.contact?.studentContact
           }))
           .sort((a, b) => parseInt(a.rollNumber) - parseInt(b.rollNumber));
         this.cache[cacheKey] = this.absentRecords;
@@ -400,8 +380,7 @@ export default {
             this.showSnackbar('Selected class not found');
             return;
           }
-          // Fetch records for a specific class using a single query
-          // Uses composite index: classId (Ascending), year (Ascending), month (Ascending)
+          // Started to use indexing to fetch data below 8 lines.
           const q = query(
             collection(this.db, 'AttendanceRecords'),
             where('classId', '==', this.selectedClass),
@@ -410,6 +389,25 @@ export default {
           );
           const snapshot = await getDocs(q);
           records = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+/*
+          const studentIds = classData.studentIds || [];
+          const daysInMonth = Array.from({ length: totalDays }, (_, i) => i + 1);
+          const studentDocs = await Promise.all(
+            studentIds.map(async studentId => {
+              const docs = await Promise.all(
+                daysInMonth.map(async day => {
+                  const formattedDay = String(day).padStart(2, '0');
+                  const docId = `${this.selectedClass}_${studentId}_${this.selectedYear}-${formattedMonth}-${formattedDay}`;
+                  const docRef = doc(this.db, 'AttendanceRecords', docId);
+                  const docSnap = await getDoc(docRef);
+                  return docSnap.exists() ? { ...docSnap.data(), id: docId } : null;
+                })
+              );
+              return docs.filter(doc => doc);
+            })
+          );
+          records = studentDocs.flat();
+          */
         } else {
           const q = query(
             collection(this.db, 'AttendanceRecords'),
@@ -549,8 +547,9 @@ export default {
         }
         const classId = classData.classId;
         if (this.studentQueryType === 'day') {
-          console.log('Fetching single day for student:', this.selectedStudent.studentId, 'class:', classId, 'docId:', `${classId}_${this.selectedStudent.studentId}_${this.selectedYear}-${formattedMonth}-${formattedDay}`);
+          
           const docId = `${classId}_${this.selectedStudent.studentId}_${this.selectedYear}-${formattedMonth}-${formattedDay}`;
+          console.log('Fetching single day for student:', this.selectedStudent.studentId, 'class:', classId, 'docId:', docId);
           const docRef = doc(this.db, 'AttendanceRecords', docId);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
@@ -653,8 +652,7 @@ export default {
     generateWhatsAppLink(record) {
       const date = format(new Date(this.selectedYear, this.selectedMonth - 1, this.selectedDay), 'PPP');
       const message = `Your child ${record.name} was absent on ${date}`;
-      const contact = record.parentContact || record.studentContact;
-      return `https://wa.me/${contact}?text=${encodeURIComponent(message)}`;
+      return `whatsapp://send?phone=${record.parentContact}&text=${encodeURIComponent(message)}`;
     },
     exportToCSV(type) {
       let headers, rows;
@@ -664,7 +662,7 @@ export default {
           r.rollNumber,
           r.name,
           r.classId,
-          r.parentContact || r.studentContact || 'N/A',
+          r.parentContact || 'N/A',
         ]);
       } else if (type === 'monthly' || type === 'quarterly') {
         headers = ['Roll', 'Name', 'Class', 'Present Days', 'Total Days', 'Percentage', 'Consecutive Absences'];
@@ -764,12 +762,12 @@ export default {
 .tabs button {
   padding: 10px 20px;
   border: none;
-  background: #544cc9;
+  background: #f0f0f0;
   cursor: pointer;
   border-radius: 4px;
 }
 .tabs button.active {
-  background: #20bed3;
+  background: #00FF00;
   color: white;
 }
 .table-container {

@@ -120,10 +120,10 @@
         for (let i = 0; i < this.students.length; i++) {
             const student = this.students[i];
             const studentId = student.studentId;
-            const { studentId: _, ...data } = student;
+            //const { studentId: _, ...data } = student;
   
           try {
-            await setDoc(doc(db, 'Students', studentId), data);
+            await setDoc(doc(db, 'Students', studentId), this.students[i]);
             this.uploadProgress = i + 1;
           } catch (error) {
             console.error(`Error uploading ${studentId}:`, error);

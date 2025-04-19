@@ -88,7 +88,8 @@ export default {
         await setDoc(doc(db, "Classes", this.classSec), {
           studentIds: studentIds,
           teacherId: this.teacherId,
-          sessionYear: this.sessionYear
+          sessionYear: this.sessionYear,
+          studentId: this.classSec
         });
         this.snackbarType = 'success';
         this.showToast("Class created/updated successfully!");
