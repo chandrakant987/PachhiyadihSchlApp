@@ -182,6 +182,7 @@
 </template>
 
 <script>
+
 import { collection, query, where, getDocs, doc, getDoc, getFirestore } from 'firebase/firestore';
 import { format } from 'date-fns';
 import Snackbar from '../components/Snackbar.vue';
@@ -237,7 +238,7 @@ export default {
         return [];
       }
       return this.students.filter(s => classData.studentIds.includes(s.studentId));
-    }
+    },
   },
   mounted() {
     this.debounceLoadData = this.debounce(this.loadData, 300);
@@ -259,6 +260,36 @@ export default {
       setTimeout(() => {
         this.snackbar.visible = false;
       }, 3000);
+    },
+    async calculateTotalDays(startDate, endDate) {
+      try {
+        const cacheKey = `totalDays_${startDate}_${endDate}`;
+        if (this.cache[cacheKey]) {
+          return this.cache[cacheKey];
+        }
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const years = [start.getFullYear(), end.getFullYear()]
+          .filter((y, i, arr) => arr.indexOf(y) === i)
+          .map(String);
+
+        const q = query(collection(this.db, 'Holidays'), where('year', 'in', years));
+        const snapshot = await getDocs(q);
+        const holidays = snapshot.docs.map(doc => doc.data());
+
+        let totalDays = 0;
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          const dateStr = d.toISOString().split('T')[0];
+          const isHoliday = holidays.some(h => dateStr >= h.startDate && dateStr <= h.endDate);
+          if (!isHoliday) totalDays++;
+        }
+        this.cache[cacheKey] = totalDays;
+        return totalDays;
+      } catch (error) {
+        console.error('Error calculating totalDays:', error);
+        this.showSnackbar('Failed to calculate working days');
+        return 0;
+      }
     },
     async loadClasses() {
       this.isLoading = true;
@@ -392,16 +423,21 @@ export default {
       this.isLoading = true;
       try {
         const formattedMonth = String(this.selectedMonth).padStart(2, '0');
+        const startDate = `${this.selectedYear}-${formattedMonth}-01`;
+        const endDate = `${this.selectedYear}-${formattedMonth}-${new Date(this.selectedYear, this.selectedMonth, 0).getDate()}`;
+        const totalDays = await this.calculateTotalDays(startDate, endDate);
+        if (totalDays === 0) {
+          this.showSnackbar('No working days in this month');
+          this.reportRecords = [];
+          return;
+        }
         let records = [];
-        const totalDays = new Date(this.selectedYear, this.selectedMonth, 0).getDate();
         if (this.selectedClass) {
           const classData = this.classes.find(c => c.classId === this.selectedClass);
           if (!classData) {
             this.showSnackbar('Selected class not found');
             return;
           }
-          // Fetch records for a specific class using a single query
-          // Uses composite index: classId (Ascending), year (Ascending), month (Ascending)
           const q = query(
             collection(this.db, 'AttendanceRecords'),
             where('classId', '==', this.selectedClass),
@@ -454,12 +490,17 @@ export default {
       this.isLoading = true;
       try {
         const startMonth = Math.floor((this.selectedMonth - 1) / 3) * 3 + 1;
-        const months = [startMonth, startMonth + 1, startMonth + 2];
+        const startDate = `${this.selectedYear}-${String(startMonth).padStart(2, '0')}-01`;
+        const endMonth = startMonth + 2;
+        const endDate = `${this.selectedYear}-${String(endMonth).padStart(2, '0')}-${new Date(this.selectedYear, endMonth, 0).getDate()}`;
+        const totalDays = await this.calculateTotalDays(startDate, endDate);
+        if (totalDays === 0) {
+          this.showSnackbar('No working days in this quarter');
+          this.reportRecords = [];
+          return;
+        }
         let records = [];
-        const totalDays = 90; // Approximate, to be updated with SchoolCalendar
         if (this.selectedClass) {
-          // Fetch records for a specific class using a single query
-          // Uses composite index: classId (Ascending), year (Ascending), month (Ascending)
           const q = query(
             collection(this.db, 'AttendanceRecords'),
             where('classId', '==', this.selectedClass),
@@ -475,8 +516,6 @@ export default {
             return;
           }
         } else {
-          // Fetch records for all classes
-          // Uses composite index: year (Ascending), month (Ascending)
           const q = query(
             collection(this.db, 'AttendanceRecords'),
             where('year', '==', this.selectedYear),
@@ -560,10 +599,17 @@ export default {
             this.showSnackbar('No attendance record for this day');
           }
         } else if (this.studentQueryType === 'month') {
-          const totalDays = new Date(this.selectedYear, this.selectedMonth, 0).getDate();
-          const daysInMonth = Array.from({ length: totalDays }, (_, i) => i + 1);
+          const startDate = `${this.selectedYear}-${formattedMonth}-01`;
+          const endDate = `${this.selectedYear}-${formattedMonth}-${new Date(this.selectedYear, this.selectedMonth, 0).getDate()}`;
+          const totalDays = await this.calculateTotalDays(startDate, endDate);
+          if (totalDays === 0) {
+            this.showSnackbar('No working days in this month');
+            this.studentAttendance.records = [];
+            return;
+          }
+          const daysInMonth = new Date(this.selectedYear, this.selectedMonth, 0).getDate();
           const records = await Promise.all(
-            daysInMonth.map(async day => {
+            Array.from({ length: daysInMonth }, (_, i) => i + 1).map(async day => {
               const formattedDay = String(day).padStart(2, '0');
               const docId = `${classId}_${this.selectedStudent.studentId}_${this.selectedYear}-${formattedMonth}-${formattedDay}`;
               const docRef = doc(this.db, 'AttendanceRecords', docId);
@@ -582,19 +628,24 @@ export default {
             this.showSnackbar('No attendance records for this month');
           }
         } else if (this.studentQueryType === 'span') {
+          const startDate = `${this.selectedYear}-${String(this.startMonth).padStart(2, '0')}-01`;
+          const endDate = `${this.selectedYear}-${String(this.endMonth).padStart(2, '0')}-${new Date(this.selectedYear, this.endMonth, 0).getDate()}`;
+          const totalDays = await this.calculateTotalDays(startDate, endDate);
+          if (totalDays === 0) {
+            this.showSnackbar('No working days in this period');
+            this.studentAttendance.records = [];
+            return;
+          }
           const months = Array.from(
             { length: this.endMonth - this.startMonth + 1 },
             (_, i) => this.startMonth + i
           );
-          let totalDays = 0;
           const records = await Promise.all(
             months.map(async month => {
               const formattedMonth = String(month).padStart(2, '0');
               const daysInMonth = new Date(this.selectedYear, month, 0).getDate();
-              totalDays += daysInMonth;
-              const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
               return Promise.all(
-                days.map(async day => {
+                Array.from({ length: daysInMonth }, (_, i) => i + 1).map(async day => {
                   const formattedDay = String(day).padStart(2, '0');
                   const docId = `${classId}_${this.selectedStudent.studentId}_${this.selectedYear}-${formattedMonth}-${formattedDay}`;
                   const docRef = doc(this.db, 'AttendanceRecords', docId);
@@ -764,12 +815,12 @@ export default {
 .tabs button {
   padding: 10px 20px;
   border: none;
-  background: #544cc9;
+  background: #1e4ed1;
   cursor: pointer;
   border-radius: 4px;
 }
 .tabs button.active {
-  background: #20bed3;
+  background: #3ce93c;
   color: white;
 }
 .table-container {

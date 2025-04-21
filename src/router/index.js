@@ -6,6 +6,7 @@ import ResultSearch from '../views/ResultSearch.vue';
 import StudentAttendancePage from '../views/StudentAttendancePage.vue';
 import Notifications from '../views/Notifications.vue';
 import AttendanceDashboard from '../views/AttendanceDashboard.vue';
+import HolidayManagement from '../views/HolidayManagement.vue';
 
 const routes = [
   { path: '/', component: HomePage },
@@ -14,6 +15,7 @@ const routes = [
   { path: '/mark-attendance', component: StudentAttendancePage},
   { path: '/view-notifications', component: Notifications},
   { path: '/attendace-dashboard', component: AttendanceDashboard},
+  { path: '/holiday-management', component: HolidayManagement},
 ];
 
 const router = createRouter({

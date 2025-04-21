@@ -11,6 +11,8 @@
     <a href="/mark-attendance" class="result-link">Mark-Attendances</a>
 <br>
     <a href="/attendace-dashboard" class="result-link">Attendance Dashboard</a>
+<br>
+    <a href="/holiday-management" class="result-link">Manage Holidays</a>
     
     <!-- Upload Results Section -->
     <UploadResults />
