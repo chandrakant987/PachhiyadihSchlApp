@@ -37,35 +37,35 @@
         </button>
         <h3>Student Result</h3>
         <table>
-          <tr><td><b>Student Name</b></td><td>{{ result.STUDENT_NAME }}</td></tr>
-          <tr><td><b>Father's Name</b></td><td>{{ result.FATHERS_NAME }}</td></tr>
-          <tr><td><b>School Name</b></td><td>10360904602 - UUMV PACHHIYADIH</td></tr>
-          <tr><td><b>Roll Number</b></td><td>{{ result.Roll_No }}</td></tr>
-          <tr><td><b>Section</b></td><td>{{ result.Section }}</td></tr>
+          <thead><tr><td><b>Student Name</b></td><td>{{ result.STUDENT_NAME }}</td></tr></thead>
+          <thead><tr><td><b>Father's Name</b></td><td>{{ result.FATHERS_NAME }}</td></tr></thead>
+          <thead><tr><td><b>School Name</b></td><td>10360904602 - UUMV PACHHIYADIH</td></tr></thead>
+          <thead><tr><td><b>Roll Number</b></td><td>{{ result.Roll_No }}</td></tr></thead>
+          <thead><tr><td><b>Section</b></td><td>{{ result.Section }}</td></tr></thead>
         </table>
       
         <h3>Marks Details</h3>
         <table>
-          <tr>
+          <thead><tr>
               <th>Subject</th>
               <th>F. Marks</th>
               <th>P. Marks</th>
               <th>Theory + Practical</th>
               <th>Subject Total</th>
-          </tr>
-          <tr :class="result.MIL >=30 ? 'ps' : 'fl'"><td><b>M.I.L. HINDI/URDU</b></td><td>100</td><td>30</td><td>{{ result.MIL }}</td><td><b>{{ result.MIL }}</b></td></tr>
-          <tr :class="result.SIL >=30 ? 'ps' : 'fl'"><td><b>S.I.L. SANSKRIT/NLH</b></td><td>100</td><td>30</td><td>{{ result.SIL }}</td><td><b>{{ result.SIL }}</b></td></tr>
-          <tr :class="result.MAT >=30 ? 'ps' : 'fl'"><td><b>MATHEMATICS</b></td><td>100</td><td>30</td><td>{{ result.MAT }}</td><td><b>{{ result.MAT }}</b></td></tr>
-          <tr :class="result.SCI >=30 ? 'ps' : 'fl'"><td><b>SCIENCE</b></td><td>100</td><td>30</td><td>{{ result.SCI }}</td><td><b>{{ result.SCI }}</b></td></tr>
-          <tr :class="result.SSC >=30 ? 'ps' : 'fl'"><td><b>SOCIAL SCIENCE</b></td><td>100</td><td>30</td><td>{{ result.SSC }}</td><td><b>{{ result.SSC }}</b></td></tr>
-          <tr :class="result.ENG >=30 ? 'ps' : 'fl'"><td>ENGLISH</td><td>100</td><td>30</td><td>{{ result.ENG }}</td><td>{{ result.ENG }}</td></tr>
+          </tr></thead>
+          <tbody><tr :class="result.MIL >=30 ? 'ps' : 'fl'"><td><b>M.I.L. HINDI/URDU</b></td><td>100</td><td>30</td><td>{{ result.MIL }}</td><td><b>{{ result.MIL }}</b></td></tr></tbody>
+          <tbody><tr :class="result.SIL >=30 ? 'ps' : 'fl'"><td><b>S.I.L. SANSKRIT/NLH</b></td><td>100</td><td>30</td><td>{{ result.SIL }}</td><td><b>{{ result.SIL }}</b></td></tr></tbody>
+          <tbody><tr :class="result.MAT >=30 ? 'ps' : 'fl'"><td><b>MATHEMATICS</b></td><td>100</td><td>30</td><td>{{ result.MAT }}</td><td><b>{{ result.MAT }}</b></td></tr></tbody>
+          <tbody><tr :class="result.SCI >=30 ? 'ps' : 'fl'"><td><b>SCIENCE</b></td><td>100</td><td>30</td><td>{{ result.SCI }}</td><td><b>{{ result.SCI }}</b></td></tr></tbody>
+          <tbody><tr :class="result.SSC >=30 ? 'ps' : 'fl'"><td><b>SOCIAL SCIENCE</b></td><td>100</td><td>30</td><td>{{ result.SSC }}</td><td><b>{{ result.SSC }}</b></td></tr></tbody>
+          <tbody><tr :class="result.ENG >=30 ? 'ps' : 'fl'"><td>ENGLISH</td><td>100</td><td>30</td><td>{{ result.ENG }}</td><td>{{ result.ENG }}</td></tr></tbody>
         </table>
       
         <h3>Final Result</h3>
         <table>
-            <tr :class="result.Result == 'PASS' ? 'ps' : 'fl'"><td><b>Result/Division</b></td><td>{{ result.Result  }}</td><td>Grade</td><td>{{ result.Grade }}</td></tr>
-            <tr><td><b>Total Marks</b></td><td>{{ result.AGGREGATE }}</td><td>Total Percentage</td><td>{{ result.Percentage }} %</td></tr>
-            <tr><td><b>New Roll Number</b></td><td>{{ result.New_Roll_Number }}</td><td><b>New Section</b></td><td>{{ (result.New_Roll_Number)<=42 ? 'A':'B' }}</td></tr>
+            <thead><tr :class="result.Result == 'PASS' ? 'ps' : 'fl'"><td><b>Result/Division</b></td><td>{{ result.Result  }}</td><td>Grade</td><td>{{ result.Grade }}</td></tr></thead>
+            <tbody><tr><td><b>Total Marks</b></td><td>{{ result.AGGREGATE }}</td><td>Total Percentage</td><td>{{ result.Percentage }} %</td></tr></tbody>
+            <tbody><tr><td><b>New Roll Number</b></td><td>{{ result.New_Roll_Number }}</td><td><b>New Section</b></td><td>{{ (result.New_Roll_Number)<=42 ? 'A':'B' }}</td></tr></tbody>
         </table>
         <button @click="downloadPDF">Download as PDF</button>
       </div>

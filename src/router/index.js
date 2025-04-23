@@ -14,8 +14,10 @@ const routes = [
   { path: '/result-search', component: ResultSearch},
   { path: '/mark-attendance', component: StudentAttendancePage},
   { path: '/view-notifications', component: Notifications},
-  { path: '/attendace-dashboard', component: AttendanceDashboard},
+  { path: '/attendance-dashboard', component: AttendanceDashboard},
   { path: '/holiday-management', component: HolidayManagement},
+  { path: '/holiday-list', component: HolidayManagement},
+
 ];
 
 const router = createRouter({

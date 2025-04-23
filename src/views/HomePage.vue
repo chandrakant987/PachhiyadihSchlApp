@@ -32,16 +32,12 @@
       </div>
     </section>
 
-    <!-- Result Section -->
-    <section class="results">
-      <ResultCard />
-    </section>
-
         <!-- Contact Section -->
-    <section class="bottom-container">
-      <div class="bottom-section">
-        <div class="box important-links">
-          <h2>Important Links</h2>
+    <!-- Footer Section -->
+    <section class="footer">
+      <div class="footer-container">
+        <div class="footer-column">
+          <h3>Important Links</h3>
           <ul>
             <li><a href="#">Admission Info</a></li>
             <li><a href="#">Holiday List</a></li>
@@ -50,38 +46,41 @@
             <li><a href="#">Scholarships</a></li>
           </ul>
         </div>
-        <div class="box contact-us">
-          <h2>Contact Us</h2>
+        <div class="footer-column">
+          <h3>Contact Us</h3>
           <p>Vill: Pachhiyadih</p>
           <p>PO: Odhanpur, Dist: Nawada</p>
           <p>Bihar, 805123</p>
           <p>Phone: 1234567890</p>
         </div>
       </div>
+      <div class="footer-bottom">
+        <p>© 2025 उ. उ. म. वि. पछियाडीह | Managed by School Admin</p>
+      </div>
     </section>
   </div>
+  <SignInOverlay v-if="showSignIn" @close="showSignIn = false" />
 </template>
 
 <script>
-import ResultCard from "../components/ResultCard.vue";
-import schoolImage from "../store/School1.jpg";
+import schoolImage from "/PachhiyadihSchool.jpeg";
 import resultIcon from "../assets/icons/result.png";
 import notificationIcon from "../assets/icons/notification.png";
 import bsebIcon from "../assets/icons/bseb.png";
 import udiseIcon from "../assets/icons/udise.png";
 import { getFirestore, collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import SignInOverlay from "../components/SignInOverlay.vue";
 
 export default {
   name: "HomePage",
-  components: {
-    ResultCard,
-  },
+  components: { SignInOverlay },
   data() {
     return {
+      showSignIn: false,
       schoolImages: [schoolImage],
       newNotifications: [],
       quickLinks: [
-        { text: "Results", url: "/results", icon: resultIcon },
+        { text: "Results", url: "/result-search", icon: resultIcon },
         { text: "Notifications", url: "/view-notifications", icon: notificationIcon },
         { text: "BSEB", url: "https://biharboardonline.bihar.gov.in/", icon: bsebIcon },
         { text: "UDISE+", url: "https://udiseplus.gov.in/", icon: udiseIcon },
@@ -115,6 +114,12 @@ export default {
 </script>
 
 <style scoped>
+body, html {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
 .homepage {
   background: linear-gradient(#f5f7fa, #e4ecf7);
   display: flex;
@@ -199,57 +204,66 @@ export default {
   max-width: 1000px;
 }
 
-.bottom-container {
+.footer {
+  background-color: #1f2937;
+  color: #ffffff;
+  width: 100%;
+  margin-top: 2rem;
+}
+
+.footer-container {
   max-width: 1000px;
-  margin: 0 auto;
-  padding: 0 1rem;
-}
-
-.bottom-section {
+  margin: auto;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 2rem;
-  background-color: #f9fafb;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  flex-wrap: nowrap;
+  padding: 0.5rem 1rem;
+  gap: 1rem;
 }
 
-.links-section,
-.contact-section {
-  flex: 1 1 50%;
+.footer-column {
+  flex: 1 1 200px;
 }
 
-.links-section ul {
+.footer-column p {
+  margin: 0.1rem 0;
+  line-height: 1.3;
+}
+
+.footer-column h3 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  color: #facc15;
+}
+
+.footer-column ul {
+  list-style: none;
   padding: 0;
-  list-style-type: none;
 }
 
-.links-section li {
+.footer-column ul li {
   margin-bottom: 0.5rem;
 }
 
-.links-section a {
+.footer-column a {
+  color: #d1d5db;
   text-decoration: none;
-  color: #2563eb;
 }
 
-.links-section a:hover {
+.footer-column a:hover {
   text-decoration: underline;
 }
 
-@media (max-width: 768px) {
-  .bottom-section {
-    flex-direction: column;
-  }
-
-  .links-section,
-  .contact-section {
-    flex: unset;
-    width: 100%;
-  }
+.footer-bottom {
+  background-color: #111827;
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.9rem;
+  color: #9ca3af;
 }
+
+/* Ensure no extra scroll */
+
 
 
 @keyframes scroll-left {
@@ -260,4 +274,14 @@ export default {
     transform: translateX(-100%);
   }
 }
+
+.homepage {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
 </style>
