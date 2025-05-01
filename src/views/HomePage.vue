@@ -32,7 +32,6 @@
       </div>
     </section>
 
-        <!-- Contact Section -->
     <!-- Footer Section -->
     <section class="footer">
       <div class="footer-container">

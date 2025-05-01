@@ -1,6 +1,9 @@
 <template>
   <div class="attendance-dashboard">
     <h2>Attendance Dashboard</h2>
+    <div v-if="holiday" class="holiday-notice">
+      HOLIDAY: {{ holiday.description }}
+    </div>
     <div class="filters">
       <select v-model="selectedYear" @change="debounceLoadData">
         <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
@@ -20,7 +23,7 @@
           v-model="selectedStudentName"
           list="students"
           placeholder="Select Student"
-          @input="updateSelectedStudent"
+          @change="updateSelectedStudent"
         />
         <datalist id="students">
           <option v-for="student in filteredStudents" :key="student.studentId" :value="student.name">
@@ -226,6 +229,8 @@ export default {
       },
       isLoading: false,
       debounceLoadData: null,
+      holiday: null,
+      holidaysCache: {}, // e.g., { '2025': [{ description, startDate, endDate }, ...] }
     };
   },
   computed: {
@@ -239,12 +244,16 @@ export default {
       }
       return this.students.filter(s => classData.studentIds.includes(s.studentId));
     },
+    formattedDate() {
+      return `${this.selectedYear}-${String(this.selectedMonth).padStart(2, '0')}-${String(this.selectedDay).padStart(2, '0')}`;
+    },
   },
   mounted() {
     this.debounceLoadData = this.debounce(this.loadData, 300);
     this.loadClasses();
     this.loadStudents();
     this.loadData();
+    this.loadHolidays();
   },
   methods: {
     format,
@@ -260,6 +269,31 @@ export default {
       setTimeout(() => {
         this.snackbar.visible = false;
       }, 3000);
+    },
+    async loadHolidays() {
+      try {
+        this.holiday = null;
+        const yearStr = String(this.selectedYear);
+        const selectedDateStr = this.formattedDate; // e.g., "2025-04-10"
+
+        // Check cache first
+        if (!this.holidaysCache[yearStr]) {
+          const holidaysRef = collection(this.db, 'Holidays');
+          const q = query(holidaysRef, where('year', '==', yearStr));
+          const snapshot = await getDocs(q);
+          this.holidaysCache[yearStr] = snapshot.docs.map((doc) => doc.data());
+        }
+
+        // Check holidays for the selected date
+        const holidays = this.holidaysCache[yearStr] || [];
+        holidays.forEach(({ startDate, endDate, description }) => {
+          if (selectedDateStr >= startDate && selectedDateStr <= endDate) {
+            this.holiday = { description };
+          }
+        });
+      } catch (error) {
+        this.showSnackbar(`Error loading holidays: ${error.message}`, 'error');
+      }
     },
     async calculateTotalDays(startDate, endDate) {
       try {
@@ -405,7 +439,7 @@ export default {
           .sort((a, b) => parseInt(a.rollNumber) - parseInt(b.rollNumber));
         this.cache[cacheKey] = this.absentRecords;
         if (!this.absentRecords.length) {
-          this.showSnackbar('No absent students found');
+          this.showSnackbar('No absent students found, Firts mark the Attendance for this date');
         }
       } catch (error) {
         this.showSnackbar('Failed to load absent students');
@@ -703,7 +737,9 @@ export default {
     },
     generateWhatsAppLink(record) {
       const date = format(new Date(this.selectedYear, this.selectedMonth - 1, this.selectedDay), 'PPP');
-      const message = `Your child ${record.name} was absent on ${date}`;
+      const message = `उत्क्रमित उच्च माध्यमिक विद्यालय, पछियाडीह, नवादा\nनमस्ते,
+आपको सूचित करना है कि ${record.name}, दिनांक ${date} को विद्यालय में अनुपस्थित हैं। कृपया अनुपस्थिति के कारण को विद्यालय कार्यालय में सूचित करें।
+धन्यवाद,\nUUMV Pachhiyadih`;
       const contact = record.parentContact || record.studentContact;
       return `https://wa.me/${contact}?text=${encodeURIComponent(message)}`;
     },
@@ -778,6 +814,13 @@ export default {
       URL.revokeObjectURL(url);
     },
   },
+  watch: {
+    formattedDate: {
+      handler() {
+        this.loadHolidays();
+      },
+    },
+  },
 };
 </script>
 
@@ -786,6 +829,15 @@ export default {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
+}
+.holiday-notice {
+  background: #fff3cd;
+  color: #856404;
+  padding: 10px;
+  text-align: center;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-weight: bold;
 }
 .filters {
   display: flex;

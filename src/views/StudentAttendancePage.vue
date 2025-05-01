@@ -1,6 +1,16 @@
 <template>
   <div class="container">
+    <div v-if="holiday" class="holiday-notice">
+      HOLIDAY: {{ holiday.description }}
+    </div>
     <header>
+      <label for="class">Class:</label>
+      <select v-model="classId" id="class">
+        <option value="">Select a class</option>
+        <option v-for="classItem in classes" :key="classItem.classId" :value="classItem.classId">
+          {{ classItem.className }}
+        </option>
+      </select>
       <label for="day">Day:</label>
       <select v-model="day" id="day">
         <option v-for="d in daysInMonth" :key="d" :value="d">{{ d }}</option>
@@ -14,17 +24,6 @@
       <label for="year">Year:</label>
       <select v-model="year" id="year">
         <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
-      </select>
-      <label for="class">Class:</label>
-      <select v-model="classId" id="class">
-        <option value="Class_9_A">Class 9 A</option>
-        <option value="Class_9_B">Class 9 B</option>
-        <option value="Class_10_A">Class 10 A</option>
-        <option value="Class_10_B">Class 10 B</option>
-        <option value="Class_11_A">Class 11 A</option>
-        <option value="Class_11_B">Class 11 B</option>
-        <option value="Class_12_A">Class 12 A</option>
-        <option value="Class_12_B">Class 12 B</option>
       </select>
     </header>
 
@@ -67,7 +66,13 @@
       <button @click="submit">Submit</button>
     </footer>
 
-    <div class="toast" :class="{ show: showToast }">{{ toastMessage }}</div>
+    <Snackbar
+      :message="snackbar.message"
+      :visible="snackbar.visible"
+      :type="snackbar.type"
+      @update:visible="snackbar.visible = $event"
+    />
+    
   </div>
 </template>
 
@@ -79,12 +84,16 @@ import {
   getDocs,
   getDoc,
   doc,
-  setDoc,
+  writeBatch,
   getFirestore,
 } from "firebase/firestore";
+import Snackbar from '../components/Snackbar.vue';
 
 export default {
   name: "Attendance",
+  components: {
+    Snackbar,
+  },
   data() {
     const today = new Date();
     return {
@@ -92,7 +101,9 @@ export default {
       day: today.getDate(),
       month: today.getMonth() + 1,
       year: today.getFullYear(),
-      classId: "Class_10_A",
+      classes: [],
+      classId: '',
+      lastClassId: null,
       months: [
         "January",
         "February",
@@ -110,8 +121,13 @@ export default {
       years: Array.from({ length: 11 }, (_, i) => today.getFullYear() - 5 + i),
       students: [],
       attendanceState: {},
-      showToast: false,
-      toastMessage: "",
+      snackbar: {
+        visible: false,
+        message: '',
+        type: 'error',
+      },
+      holiday: null,
+      holidaysCache: {}, // e.g., { '2025': [{ description, startDate, endDate }, ...] }
       tooltip: {
         visible: false,
         data: {
@@ -143,52 +159,125 @@ export default {
     daysInMonth() {
       return new Date(this.year, this.month, 0).getDate();
     },
+    formattedDate() {
+      return `${this.year}-${String(this.month).padStart(2, '0')}-${String(this.day).padStart(2, '0')}`;
+    },
+  },
+  async mounted() {
+    await this.loadClasses();
+    await this.loadHolidays();
   },
   methods: {
     async loadAttendance() {
       try {
-        const q = query(
-          collection(this.db, "AttendanceRecords"),
-          where("classId", "==", this.classId),
-          where("year", "==", this.year),
-          where("month", "==", this.month),
-          where("day", "==", this.day)
-        );
-        const snapshot = await getDocs(q);
-        this.attendanceState = {};
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          this.attendanceState[data.studentId] = {
-            status: data.status,
-            docId: doc.id,
-          };
+        if (!this.classId || this.students.length === 0) {
+          this.attendanceState = {};
+          return;
+        }
+        const studentIds = this.students.map((s) => s.studentId);
+        const attendancePromises = studentIds.map(async (studentId) => {
+          const docId = `${this.classId}_${studentId}_${this.formattedDate}`;
+          const docRef = doc(this.db, 'AttendanceRecords', docId);
+          const docSnap = await getDoc(docRef);
+          return { studentId, docSnap };
         });
-      } catch (e) {
-        this.showToastMessage("Error loading attendance");
-        console.error(e);
+        const results = await Promise.all(attendancePromises);
+        this.attendanceState = {};
+        let hasRecords = false;
+        results.forEach(({ studentId, docSnap }) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            this.attendanceState[studentId] = {
+              status: data.status,
+              docId: docSnap.id,
+            };
+            hasRecords = true;
+          } else {
+            this.attendanceState[studentId] = {
+              status: 'A',
+              docId: null,
+            };
+          }
+        });
+        if (!hasRecords) {
+          const metadataDocId = `${this.classId}_${this.formattedDate}`;
+          const metadataRef = doc(this.db, 'AttendanceMetadata', metadataDocId);
+          const metadataDoc = await getDoc(metadataRef);
+          if (!metadataDoc.exists()) {
+            this.showSnackbar(
+              'No attendance records found. Consider populating AttendanceMetadata for comprehensive management.',
+              'warning'
+            );
+          }
+        }
+      } catch (error) {
+        this.showSnackbar(`Error loading attendance: ${error.message}`, 'error');
+      }
+    },
+    async loadClasses() {
+      try {
+        const classesRef = collection(this.db, 'Classes');
+        const snapshot = await getDocs(classesRef);
+        this.classes = snapshot.docs.map((doc) => ({
+          classId: doc.id,
+          className: doc.data().classId,
+        }));
+      } catch (error) {
+        this.showSnackbar(`Error loading classes: ${error.message}`, 'error');
+      }
+    },
+    async loadHolidays() {
+      try {
+        this.holiday = null;
+        const yearStr = String(this.year);
+        const selectedDateStr = this.formattedDate; // e.g., "2025-04-10"
+
+        // Check cache first
+        if (!this.holidaysCache[yearStr]) {
+          const holidaysRef = collection(this.db, 'Holidays');
+          const q = query(holidaysRef, where('year', '==', yearStr));
+          const snapshot = await getDocs(q);
+          this.holidaysCache[yearStr] = snapshot.docs.map((doc) => doc.data());
+        }
+
+        // Check holidays for the selected date
+        const holidays = this.holidaysCache[yearStr] || [];
+        holidays.forEach(({ startDate, endDate, description }) => {
+          if (selectedDateStr >= startDate && selectedDateStr <= endDate) {
+            this.holiday = { description };
+          }
+        });
+      } catch (error) {
+        this.showSnackbar(`Error loading holidays: ${error.message}`, 'error');
       }
     },
     async loadStudents() {
+      if (this.classId === this.lastClassId && this.students.length > 0) {
+        return;
+      }
       try {
-        const classDoc = await getDoc(doc(this.db, "Classes", this.classId));
+        const classDoc = await getDoc(doc(this.db, 'Classes', this.classId));
+        if (!classDoc.exists()) {
+          throw new Error('Class not found');
+        }
         const studentIds = classDoc.data()?.studentIds || [];
         const chunks = studentIds.reduce((result, id, i) => {
           if (i % 10 === 0) result.push([]);
           result[result.length - 1].push(id);
           return result;
         }, []);
-        const studentPromises = chunks.map(chunk =>
-          getDocs(query(collection(this.db, "Students"), where("__name__", "in", chunk)))
+        const studentPromises = chunks.map((chunk) =>
+          getDocs(query(collection(this.db, 'Students'), where('__name__', 'in', chunk)))
         );
         const snapshots = await Promise.all(studentPromises);
         this.students = snapshots
-          .flatMap(snapshot =>
-            snapshot.docs.map(doc => ({ studentId: doc.id, ...doc.data() }))
+          .flatMap((snapshot) =>
+            snapshot.docs.map((doc) => ({ studentId: doc.id, ...doc.data() }))
           )
           .sort((a, b) => parseInt(a.rollNumber) - parseInt(b.rollNumber));
-      } catch (e) {
-        this.showToastMessage("Error loading students");
-        console.error(e);
+        this.lastClassId = this.classId;
+      } catch (error) {
+        this.showSnackbar(`Error loading students: ${error.message}`, 'error');
       }
     },
     toggleAttendance(studentId) {
@@ -207,45 +296,54 @@ export default {
     },
     async submit() {
       try {
-        const batch = [];
+        if (!this.classId) {
+          throw new Error('No class selected');
+        }
+        const batch = writeBatch(this.db);
+        const studentIds = [];
         this.students.forEach((student) => {
           const state = this.attendanceState[student.studentId] || {
-            status: "A",
+            status: 'A',
             docId: null,
           };
-          const docId = state.docId || 
-            `${this.classId}_${student.studentId}_${this.year}-${String(this.month).padStart(2, "0")}-${String(this.day).padStart(2, "0")}`;
-          const docRef = doc(this.db, "AttendanceRecords", docId);
-          batch.push(
-            setDoc(
-              docRef,
-              {
-                classId: this.classId,
-                studentId: student.studentId,
-                date: this.selectedDate.getTime() / 1000,
-                year: this.year,
-                month: this.month,
-                day: this.day,
-                status: state.status,
-                isPresent: state.status === "P",
-              },
-              { merge: true }
-            )
+          const docId =
+            state.docId ||
+            `${this.classId}_${student.studentId}_${this.formattedDate}`;
+          const docRef = doc(this.db, 'AttendanceRecords', docId);
+          batch.set(
+            docRef,
+            {
+              classId: this.classId,
+              studentId: student.studentId,
+              date: Math.floor(this.selectedDate.getTime() / 1000),
+              year: this.year,
+              month: this.month,
+              day: this.day,
+              status: state.status,
+              isPresent: state.status === 'P',
+            },
+            { merge: true }
           );
+          studentIds.push(student.studentId);
         });
-        await Promise.all(batch);
-        this.showToastMessage("Attendance saved");
+        const metadataDocId = `${this.classId}_${this.formattedDate}`;
+        const metadataRef = doc(this.db, 'AttendanceMetadata', metadataDocId);
+        batch.set(metadataRef, { studentIds });
+        await batch.commit();
+        this.showSnackbar('Attendance saved successfully', 'success');
         await this.loadAttendance();
-      } catch (e) {
-        this.showToastMessage("Error saving attendance");
-        console.error(e);
+      } catch (error) {
+        this.showSnackbar(`Error saving attendance: ${error.message}`, 'error');
       }
     },
-    showToastMessage(message) {
-      this.toastMessage = message;
-      this.showToast = true;
-      setTimeout(() => (this.showToast = false), 2000);
+
+    showSnackbar(message, type = 'error') {
+      this.snackbar = { visible: true, message, type };
+      setTimeout(() => {
+        this.snackbar.visible = false;
+      }, 3000);
     },
+    
     handleMouseEnter(student, event) {
       clearTimeout(this.tooltip.delayTimeout);
       this.tooltip.delayTimeout = setTimeout(() => {
@@ -282,14 +380,20 @@ export default {
   watch: {
     classId: {
       handler() {
-        this.loadStudents();
-        this.loadAttendance();
+        if (this.classId) {
+          this.loadStudents();
+          this.loadAttendance();
+        } else {
+          this.students = [];
+          this.attendanceState = {};
+        }
       },
       immediate: true,
     },
     selectedDate: {
       handler() {
         this.loadAttendance();
+        this.loadHolidays();
         const maxDays = this.daysInMonth;
         if (this.day > maxDays) this.day = maxDays;
       },
@@ -303,8 +407,17 @@ export default {
 header { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
 header label { margin-right: 5px; }
 header select { padding: 5px; }
+.holiday-notice {
+  background: #fff3cd;
+  color: #856404;
+  padding: 10px;
+  text-align: center;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-weight: bold;
+}
 .sticky-container { position: sticky; top: 0; display: flex; justify-content: space-between; align-items: center; z-index: 1; }
-.present-count { width: 30px; height: 30px; background-color: #0f770f; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+.present-count { width: 30px; height: 30px; background-color: #0f770f; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-bottom: 10px; margin-right: 5px; }
 .present-list { background-color: #E0E0E0; padding: 5px 10px; border-radius: 5px; margin-bottom: 10px; overflow-x: auto; white-space: nowrap; flex-grow: 1; margin-right: 10px; }
 main { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 10px; max-height: 60vh; overflow-y: auto; overflow-x: hidden; width: 100%; box-sizing: border-box; }
 .card { width: 60px; height: 60px; background-color: #D3D3D3; display: flex; align-items: center; justify-content: center; color: #333; font-weight: bold; cursor: pointer; border-radius: 5px; transition: background-color 0.3s; }
@@ -345,6 +458,10 @@ button:hover { background-color: #0056b3; }
   .card { width: 60px; height: 60px; }
   .tooltip { font-size: 10px; padding: 6px 8px; max-width: 180px; }
   .tooltip-line { margin-bottom: 3px; }
+  .holiday-notice {
+    font-size: 0.9em;
+    padding: 8px;
+  }
 }
 @media (max-width: 400px) {
   .container { padding: 10px; }

@@ -9,6 +9,7 @@
     </header>
 
     <!-- Mobile Tab Bar -->
+    <!-- https://svg-path-visualizer.netlify.app/ -->
     <nav class="tab-bar" v-if="isMobile">
       <button
         class="tab"
@@ -131,8 +132,15 @@
           </svg>
           <span>Manage Holidays</span>
         </a>
+        <a href="/delete-attendance" class="link-card">
+          <svg class="link-icon" viewBox="0 0 24 24" fill="#facc15">
+            <path d="M 19 3 H 5 C 3.9 3 3 3.9 3 5 V 19 C 3 20.1 3.9 21 5 21 H 19 C 20.1 21 21 20.1 21 19 V 5 C 21 3.9 20.1 3 19 3 H 17 L 17 10 L 17 8 C 15 9 16 9 15 10 L 15 17 Q 11.5 18 8 17 L 8 10 C 7 9 8 9 6 8 C 10 7 13 7 17 8"/>
+          </svg>
+          <span>Delete Holidays</span>
+        </a>
       </div>
     </section>
+    <!-- <router-link :to="{ name: 'DeleteAttendace'}">Delete Attendance</router-link> -->
   </div>
 </template>
 

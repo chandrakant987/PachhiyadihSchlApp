@@ -7,12 +7,12 @@
       <nav class="navbar__nav">
         <router-link to="/" class="navbar__link">Home</router-link>
         <router-link to="/holiday-list" class="navbar__link">Holiday List</router-link>
-        <router-link to="/results" class="navbar__link">Results</router-link>
+        <router-link to="/result-search" class="navbar__link">Results</router-link>
 
         <!-- Role-based links -->
         <router-link v-if="userRole === 'admin'" to="/admin" class="navbar__link">Admin</router-link>
         <router-link v-if="userRole === 'teacher'" to="/teacher" class="navbar__link">Teacher</router-link>
-        <router-link v-if="userRole === 'student'" to="/student" class="navbar__link">Student</router-link>
+        <router-link v-if="userRole === 'student'" to="/student-page" class="navbar__link">Student</router-link>
 
         <!-- Auth buttons -->
         <button v-if="userRole" @click="logout" class="navbar__link btn-link">Logout</button>
@@ -25,11 +25,11 @@
     <div v-if="menuOpen" class="navbar__mobile-menu">
       <router-link to="/" class="navbar__mobile-link" @click="toggleMenu">Home</router-link>
       <router-link to="/holiday-list" class="navbar__mobile-link" @click="toggleMenu">Holiday List</router-link>
-      <router-link to="/results" class="navbar__mobile-link" @click="toggleMenu">Results</router-link>
+      <router-link to="/result-search" class="navbar__mobile-link" @click="toggleMenu">Results</router-link>
       
       <router-link v-if="userRole === 'admin'" to="/admin" class="navbar__mobile-link" @click="toggleMenu">Admin</router-link>
       <router-link v-if="userRole === 'teacher'" to="/teacher" class="navbar__mobile-link" @click="toggleMenu">Teacher</router-link>
-      <router-link v-if="userRole === 'student'" to="/student" class="navbar__mobile-link" @click="toggleMenu">Student</router-link>
+      <router-link v-if="userRole === 'student'" to="/student-page" class="navbar__mobile-link" @click="toggleMenu">Student</router-link>
 
       <button v-if="userRole" @click="logout" class="navbar__mobile-link btn-link">Logout</button>
       <button v-else @click="$emit('show-signin')" class="navbar__mobile-link btn-link">Sign In</button>
@@ -70,6 +70,7 @@ export default {
     async logout() {
       const auth = getAuth();
       await signOut(auth);
+      localStorage.clear(); // Clear selectedStudent and isAccessCodeVerified
       this.userRole = null;
       this.$router.push("/");
     }
@@ -102,7 +103,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .navbar__logo {
@@ -112,9 +113,10 @@ export default {
 
 .navbar__header {
   font-size: 1.5rem;
-  margin-left: 0.5rem;
+  margin-left: 0.3rem;
   color: #facc15;
   flex-grow: 1;
+  text-align: left;
 }
 
 .navbar__nav {
@@ -164,7 +166,7 @@ export default {
 }
 
 .navbar__mobile-link {
-  color: white;
+  color: #facc15;
   text-decoration: none;
   padding: 0.5rem 0;
   border-bottom: 1px solid #4b5563;
@@ -183,6 +185,9 @@ export default {
   }
   .navbar__mobile-menu {
     display: flex;
+  }
+  .navbar__header {
+    font-size: 1rem;
   }
 }
 </style>

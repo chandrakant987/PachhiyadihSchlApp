@@ -1,84 +1,86 @@
 <template>
     <div class="holiday-management container mx-auto p-4">
-      <!-- Form for Adding/Editing Holidays -->
-      <div class="form-section bg-white shadow-md rounded-lg p-6 mb-6">
-        <h2 class="text-2xl font-bold mb-4">{{ isEditing ? 'Edit Holiday' : 'Add Holiday' }}</h2>
-        <form @submit.prevent="saveHoliday">
-          <div class="mb-4">
-            <label class="block text-gray-700">Start Date</label>
-            <input
-              v-model="form.startDate"
-              type="date"
-              class="w-full border rounded p-2"
-              :min="`${form.year}-01-01`"
-              :max="`${form.year}-12-31`"
-            />
-            <p v-if="errors.startDate" class="text-red-500 text-sm">{{ errors.startDate }}</p>
-          </div>
-          <div class="mb-4">
-            <label class="block text-gray-700">End Date</label>
-            <input
-              v-model="form.endDate"
-              type="date"
-              class="w-full border rounded p-2"
-              :min="`${form.year}-01-01`"
-              :max="`${form.year}-12-31`"
-            />
-            <p v-if="errors.endDate" class="text-red-500 text-sm">{{ errors.endDate }}</p>
-          </div>
-          <div class="mb-4">
-            <label class="block text-gray-700">Description</label>
-            <input
-              v-model="form.description"
-              type="text"
-              class="w-full border rounded p-2"
-              placeholder="e.g., Diwali, Summer Vacation"
-            />
-            <p v-if="errors.description" class="text-red-500 text-sm">{{ errors.description }}</p>
-          </div>
-          <div class="mb-4">
-            <label class="block text-gray-700">Calendar Year</label>
-            <select v-model="form.year" class="w-full border rounded p-2">
+      <div v-if="userRole === 'admin'">
+        <!-- Form for Adding/Editing Holidays -->
+        <div class="form-section bg-white shadow-md rounded-lg p-6 mb-6">
+          <h2 class="text-2xl font-bold mb-4">{{ isEditing ? 'Edit Holiday' : 'Add Holiday' }}</h2>
+          <form @submit.prevent="saveHoliday">
+            <div class="mb-4">
+              <label class="block text-gray-700">Start Date</label>
+              <input
+                v-model="form.startDate"
+                type="date"
+                class="w-full border rounded p-2"
+                :min="`${form.year}-01-01`"
+                :max="`${form.year}-12-31`"
+              />
+              <p v-if="errors.startDate" class="text-red-500 text-sm">{{ errors.startDate }}</p>
+            </div>
+            <div class="mb-4">
+              <label class="block text-gray-700">End Date</label>
+              <input
+                v-model="form.endDate"
+                type="date"
+                class="w-full border rounded p-2"
+                :min="`${form.year}-01-01`"
+                :max="`${form.year}-12-31`"
+              />
+              <p v-if="errors.endDate" class="text-red-500 text-sm">{{ errors.endDate }}</p>
+            </div>
+            <div class="mb-4">
+              <label class="block text-gray-700">Description</label>
+              <input
+                v-model="form.description"
+                type="text"
+                class="w-full border rounded p-2"
+                placeholder="e.g., Diwali, Summer Vacation"
+              />
+              <p v-if="errors.description" class="text-red-500 text-sm">{{ errors.description }}</p>
+            </div>
+            <div class="mb-4">
+              <label class="block text-gray-700">Calendar Year</label>
+              <select v-model="form.year" class="w-full border rounded p-2">
+                <option v-for="year in availableYears" :key="year" :value="year">{{ year }}</option>
+              </select>
+            </div>
+            <div class="flex space-x-4">
+              <button
+                type="submit"
+                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                :disabled="isLoading"
+              >
+                {{ isEditing ? 'Update' : 'Add' }} Holiday
+              </button>
+              <button
+                v-if="isEditing"
+                type="button"
+                class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                @click="cancelEdit"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      
+        <!-- Mark Sundays Button -->
+        <div class="sundays-section bg-white shadow-md rounded-lg p-6 mb-6">
+          <h2 class="text-2xl font-bold mb-4">Mark Sundays</h2>
+          <div class="flex items-center space-x-4">
+            <select v-model="sundaysYear" class="border rounded p-2">
               <option v-for="year in availableYears" :key="year" :value="year">{{ year }}</option>
             </select>
-          </div>
-          <div class="flex space-x-4">
             <button
-              type="submit"
-              class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+              @click="markSundays"
               :disabled="isLoading"
             >
-              {{ isEditing ? 'Update' : 'Add' }} Holiday
-            </button>
-            <button
-              v-if="isEditing"
-              type="button"
-              class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-              @click="cancelEdit"
-            >
-              Cancel
+              Mark Sundays for {{ sundaysYear }}
             </button>
           </div>
-        </form>
-      </div>
-  
-      <!-- Mark Sundays Button -->
-      <div class="sundays-section bg-white shadow-md rounded-lg p-6 mb-6">
-        <h2 class="text-2xl font-bold mb-4">Mark Sundays</h2>
-        <div class="flex items-center space-x-4">
-          <select v-model="sundaysYear" class="border rounded p-2">
-            <option v-for="year in availableYears" :key="year" :value="year">{{ year }}</option>
-          </select>
-          <button
-            class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-            @click="markSundays"
-            :disabled="isLoading"
-          >
-            Mark Sundays for {{ sundaysYear }}
-          </button>
         </div>
       </div>
-  
+
       <!-- Holiday List -->
       <div class="list-section bg-white shadow-md rounded-lg p-6">
         <h2 class="text-2xl font-bold mb-4">Holidays</h2>
@@ -95,7 +97,7 @@
               <th class="border p-2">Date Range</th>
               <th class="border p-2">Description</th>
               <th class="border p-2">Year</th>
-              <th class="border p-2">Actions</th>
+              <th v-if="userRole === 'admin'" class="border p-2">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -105,7 +107,7 @@
               </td>
               <td class="border p-2">{{ holiday.description }}</td>
               <td class="border p-2">{{ holiday.year }}</td>
-              <td class="border p-2">
+              <td v-if="userRole === 'admin'" class="border p-2">
                 <button
                   class="text-blue-500 hover:underline mr-2"
                   @click="editHoliday(holiday)"
@@ -174,6 +176,7 @@
   } from 'firebase/firestore';
   import { formatInTimeZone, toDate } from 'date-fns-tz';
   import { isSunday } from 'date-fns';
+  import { authService } from '../services/auth';
   
   export default {
     name: 'HolidayManagement',
@@ -199,6 +202,7 @@
         showConfirmDialog: false,
         confirmDialog: { title: '', message: '', action: null },
         toastMessage: '',
+        userRole: 'public',
       };
     },
     computed: {
@@ -224,9 +228,12 @@
         });
       },
     },
-    mounted() {
-      this.fetchHolidays();
-    },
+    // mounted() {
+    //   authService.initAuth((user, role) => {
+    //     this.userRole = role;
+    //   });
+    //   this.fetchHolidays();
+    // },
     methods: {
       // Fetch holidays from Firestore
       async fetchHolidays() {
@@ -456,6 +463,13 @@
         }
       },
     },
+    created() {
+      // Initialize auth state and fetch holidays
+      authService.initAuth((user, role) => {
+        this.userRole = role;
+      });
+      this.fetchHolidays();
+    },
   };
   </script>
   
@@ -469,10 +483,17 @@
   .list-section {
     border: 1px solid #e5e7eb;
   }
+
+  table, th, td {
+    border: 1px solid black;
+  }
   
   table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse:collapse;
+  }
+  tr:nth-child(even) {
+    background-color: #e4dfcc;
   }
   
   th,

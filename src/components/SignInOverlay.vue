@@ -16,16 +16,17 @@
   </template>
   
   <script>
-  import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-  import { getFirestore, doc, getDoc } from "firebase/firestore";
+  import { authService } from "../services/auth"
   
   export default {
+    name: 'SignInOverlay',
     data() {
       return {
         email: '',
         password: '',
         error: '',
         loading: false,
+        showOverlay: true,
       };
     },
     methods: {
@@ -33,20 +34,23 @@
         this.loading = true;
         this.error = '';
         try {
-            console.log("User ",this.email," Pwd: ",this.password)
-          const auth = getAuth();
-          const userCredential = await signInWithEmailAndPassword(auth, this.email, this.password);
-          const user = userCredential.user;
-  
-          const db = getFirestore();
-          const userDoc = await getDoc(doc(db, 'Users', user.uid));
-          const role = userDoc.exists() ? userDoc.data().role : null;
-  
-          if (role === 'admin') this.$router.push('/admin');
-          else if (role === 'student') this.$router.push('/admin');
-          else if (role === 'teacher') this.$router.push('/admin');
-          else this.error = 'Role not assigned. Contact admin.';
-  
+          const success = await authService.signIn(this.email, this.password);
+          if (success) {
+            this.showOverlay = false;
+            this.error = null;
+            const role = authService.currentRole;
+            if (role === 'admin') {
+              this.$router.push('/admin');
+            } else if (role === 'student') {
+              this.$router.push('/student-page');
+            } else if (role === 'teacher') {
+              this.$router.push('/teacher');
+            } else {
+              this.$router.push('/'); // Default for public or other roles
+            }
+          } else {
+            this.error = authService.error;
+          }
           this.$emit('close');
         } catch (err) {
           this.error = err.message;
@@ -57,6 +61,7 @@
     }
   };
   </script>
+  
   
   <style scoped>
   .overlay {
